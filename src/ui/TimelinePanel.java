@@ -24,17 +24,9 @@ public final class TimelinePanel extends JPanel {
         super(new BorderLayout(6, 6));
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         JButton addDate = new JButton("+ Add Date");
         addDate.addActionListener(e -> addDate());
-        JButton editDate = new JButton("Edit Selected");
-        editDate.addActionListener(e -> editSelectedDate());
-        JButton deleteDate = new JButton("Delete Selected");
-        deleteDate.addActionListener(e -> deleteSelectedDate());
-        buttonPanel.add(addDate);
-        buttonPanel.add(editDate);
-        buttonPanel.add(deleteDate);
-        add(buttonPanel, BorderLayout.NORTH);
+        add(addDate, BorderLayout.NORTH);
 
         JScrollPane scrollPane = new JScrollPane(timelineCanvas);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -131,6 +123,7 @@ public final class TimelinePanel extends JPanel {
         boolean isSelected = date == selectedDate;
         box.setBorder(new LineBorder(isSelected ? Color.RED : Color.BLUE, isSelected ? 3 : 1));
         box.setBackground(isSelected ? new Color(255, 200, 200) : new Color(220, 240, 255));
+        box.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JLabel label = new JLabel(date.getName());
         label.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
@@ -143,8 +136,9 @@ public final class TimelinePanel extends JPanel {
         box.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                selectedDate = (selectedDate == date) ? null : date;
-                refreshTimeline();
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    showDateContextMenu(date, e.getLocationOnScreen());
+                }
             }
             
             @Override
@@ -159,6 +153,27 @@ public final class TimelinePanel extends JPanel {
         });
         
         return box;
+    }
+
+    private void showDateContextMenu(TimelineDate date, Point location) {
+        JPopupMenu menu = new JPopupMenu();
+        
+        JMenuItem editItem = new JMenuItem("Edit");
+        editItem.addActionListener(e -> {
+            selectedDate = date;
+            editSelectedDate();
+        });
+        
+        JMenuItem deleteItem = new JMenuItem("Delete");
+        deleteItem.addActionListener(e -> {
+            selectedDate = date;
+            deleteSelectedDate();
+        });
+        
+        menu.add(editItem);
+        menu.add(deleteItem);
+        
+        menu.show(timelineCanvas, location.x - timelineCanvas.getLocationOnScreen().x, location.y - timelineCanvas.getLocationOnScreen().y + 20);
     }
 
     private JWindow tooltipWindow;
@@ -197,11 +212,6 @@ public final class TimelinePanel extends JPanel {
     }
 
     private void editSelectedDate() {
-        if (selectedDate == null) {
-            JOptionPane.showMessageDialog(this, "Please select a date to edit", "Edit Date", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
         String newName = JOptionPane.showInputDialog(this, "Date name:", selectedDate.getName(), JOptionPane.PLAIN_MESSAGE);
         if (newName == null) return;
         if (!newName.isBlank()) selectedDate.setName(newName.trim());
@@ -220,11 +230,6 @@ public final class TimelinePanel extends JPanel {
     }
 
     private void deleteSelectedDate() {
-        if (selectedDate == null) {
-            JOptionPane.showMessageDialog(this, "Please select a date to delete", "Delete Date", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
         int confirm = JOptionPane.showConfirmDialog(this, "Delete '" + selectedDate.getName() + "'?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             timeline.getDates().remove(selectedDate);

@@ -61,9 +61,14 @@ public final class MainWindow {
         
         JPanel timelinesPanel = new JPanel(new BorderLayout(6, 6));
         timelinesPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JPanel timelineButtons = new JPanel(new GridLayout(1, 2, 6, 0));
         JButton addTimeline = new JButton("+ Timeline");
         addTimeline.addActionListener(e -> addTimeline());
-        timelinesPanel.add(addTimeline, BorderLayout.NORTH);
+        JButton deleteTimeline = new JButton("Delete Timeline");
+        deleteTimeline.addActionListener(e -> deleteTimeline());
+        timelineButtons.add(addTimeline);
+        timelineButtons.add(deleteTimeline);
+        timelinesPanel.add(timelineButtons, BorderLayout.NORTH);
         timelinesPanel.add(timelinesPane, BorderLayout.CENTER);
         references.addTab("Timelines", timelinesPanel);
         
@@ -174,6 +179,28 @@ public final class MainWindow {
         TimelinePanel panel = new TimelinePanel();
         panel.showTimeline(timeline, book);
         timelinesPane.addTab(timeline.getTitle(), panel);
+    }
+    
+    private void deleteTimeline() {
+        if (book == null) return;
+        int selectedIndex = timelinesPane.getSelectedIndex();
+        if (selectedIndex < 0 || selectedIndex >= book.getTimelines().size()) {
+            JOptionPane.showMessageDialog(frame, "Please select a timeline to delete", "Delete Timeline", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        Timeline selected = book.getTimelines().get(selectedIndex);
+        int confirm = JOptionPane.showConfirmDialog(frame, "Delete timeline '" + selected.getTitle() + "'?\nThis will also clear timeline references from all scenes.", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            book.getTimelines().remove(selectedIndex);
+            for (model.Scene scene : book.getScenes()) {
+                if (scene.getTimelineName().equals(selected.getTitle())) {
+                    scene.setTimelineName("");
+                    scene.setTimelineDateName("");
+                }
+            }
+            showTimelines(book);
+        }
     }
     
     private void saveDocumentContent(Object document, String content) {
