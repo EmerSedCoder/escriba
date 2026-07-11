@@ -212,21 +212,77 @@ public final class TimelinePanel extends JPanel {
     }
 
     private void editSelectedDate() {
-        String newName = JOptionPane.showInputDialog(this, "Date name:", selectedDate.getName(), JOptionPane.PLAIN_MESSAGE);
-        if (newName == null) return;
-        if (!newName.isBlank()) selectedDate.setName(newName.trim());
+        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "Edit Date", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new GridBagLayout());
+        dialog.setSize(350, 180);
+        dialog.setLocationRelativeTo(SwingUtilities.getWindowAncestor(this));
 
-        String posStr = JOptionPane.showInputDialog(this, "Position on timeline (number):", String.valueOf(selectedDate.getPosition()), JOptionPane.PLAIN_MESSAGE);
-        if (posStr == null) return;
-        try {
-            selectedDate.setPosition(Integer.parseInt(posStr.trim()));
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid position number", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        selectedDate = null;
-        refreshTimeline();
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        JLabel nameLabel = new JLabel("Date Name:");
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        dialog.add(nameLabel, gbc);
+
+        JTextField nameField = new JTextField(selectedDate.getName(), 20);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        dialog.add(nameField, gbc);
+
+        JLabel positionLabel = new JLabel("Position (number):");
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        dialog.add(positionLabel, gbc);
+
+        JTextField positionField = new JTextField(String.valueOf(selectedDate.getPosition()), 20);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        dialog.add(positionField, gbc);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+
+        okButton.addActionListener(e -> {
+            String newName = nameField.getText().trim();
+            String posStr = positionField.getText().trim();
+
+            if (newName.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Date name cannot be empty", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                int position = Integer.parseInt(posStr);
+                selectedDate.setName(newName);
+                selectedDate.setPosition(position);
+                selectedDate = null;
+                refreshTimeline();
+                dialog.dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Position must be a valid number", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(16, 8, 8, 8);
+        dialog.add(buttonPanel, gbc);
+
+        dialog.setVisible(true);
     }
 
     private void deleteSelectedDate() {
@@ -241,20 +297,76 @@ public final class TimelinePanel extends JPanel {
     private void addDate() {
         if (timeline == null) return;
 
-        String name = JOptionPane.showInputDialog(this, "Date name:", "Add Date", JOptionPane.PLAIN_MESSAGE);
-        if (name == null || name.isBlank()) return;
+        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "Add Date", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new GridBagLayout());
+        dialog.setSize(350, 180);
+        dialog.setLocationRelativeTo(SwingUtilities.getWindowAncestor(this));
 
-        String posStr = JOptionPane.showInputDialog(this, "Position on timeline (number):", "0", JOptionPane.PLAIN_MESSAGE);
-        if (posStr == null || posStr.isBlank()) return;
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
 
-        try {
-            int position = Integer.parseInt(posStr.trim());
-            TimelineDate timelineDate = new TimelineDate(name.trim(), position);
-            timeline.getDates().add(timelineDate);
-            dateAdded.accept(timelineDate);
-            refreshTimeline();
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Invalid position number", "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        JLabel nameLabel = new JLabel("Date Name:");
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        dialog.add(nameLabel, gbc);
+
+        JTextField nameField = new JTextField("", 20);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        dialog.add(nameField, gbc);
+
+        JLabel positionLabel = new JLabel("Position (number):");
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        dialog.add(positionLabel, gbc);
+
+        JTextField positionField = new JTextField("0", 20);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        dialog.add(positionField, gbc);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+
+        okButton.addActionListener(e -> {
+            String name = nameField.getText().trim();
+            String posStr = positionField.getText().trim();
+
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Date name cannot be empty", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                int position = Integer.parseInt(posStr);
+                TimelineDate timelineDate = new TimelineDate(name, position);
+                timeline.getDates().add(timelineDate);
+                dateAdded.accept(timelineDate);
+                refreshTimeline();
+                dialog.dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Position must be a valid number", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(16, 8, 8, 8);
+        dialog.add(buttonPanel, gbc);
+
+        dialog.setVisible(true);
     }
 }
