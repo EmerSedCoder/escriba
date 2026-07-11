@@ -13,6 +13,8 @@ import model.Race;
 import model.CustomTab;
 import model.CustomFolder;
 import model.CustomText;
+import model.Timeline;
+import model.TimelineDate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +35,18 @@ public final class JsonStorage {
             if (i > 0) json.append(',');
             json.append("\n    {\"title\": \"").append(escape(chapter.getTitle()))
                     .append("\", \"content\": \"").append(escape(chapter.getContent())).append("\"}");
+        }
+        json.append("\n  ],\n  \"timelines\": [");
+        for (int i = 0; i < book.getTimelines().size(); i++) {
+            Timeline timeline = book.getTimelines().get(i);
+            if (i > 0) json.append(',');
+            json.append("\n    {\"title\": \"").append(escape(timeline.getTitle())).append("\", \"dates\": [");
+            for (int j = 0; j < timeline.getDates().size(); j++) {
+                TimelineDate date = timeline.getDates().get(j);
+                if (j > 0) json.append(',');
+                json.append("\n      {\"name\": \"").append(escape(date.getName())).append("\", \"position\": ").append(date.getPosition()).append("}");
+            }
+            json.append("\n    ]}");
         }
         json.append("\n  ],\n  \"references\": [");
         appendReferences(json, "character", book.getCharacters());
@@ -62,7 +76,9 @@ public final class JsonStorage {
         for (Scene scene : book.getScenes()) {
             if (hasReferences(json)) json.append(',');
             json.append("\n    {\"type\": \"sceneMetadata\", \"title\": \"").append(escape(scene.getTitle()))
-                    .append("\", \"location\": \"").append(escape(scene.getLocationName())).append("\", \"participants\": \"")
+                    .append("\", \"location\": \"").append(escape(scene.getLocationName())).append("\", \"timeline\": \"")
+                    .append(escape(scene.getTimelineName())).append("\", \"timelineDate\": \"")
+                    .append(escape(scene.getTimelineDateName())).append("\", \"participants\": \"")
                     .append(escape(String.join("\u001F", scene.getParticipantNames()))).append("\"}");
         }
         for (Location location : book.getLocations()) {
@@ -88,6 +104,23 @@ public final class JsonStorage {
             book.getChapters().add(item);
         }
         if (book.getChapters().isEmpty()) book.getChapters().add(new Chapter("Chapter 1"));
+        
+        Pattern timeline = Pattern.compile("\\{\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"dates\\\"\\s*:\\s*\\[([^\\]]*?)\\]\\s*}");
+        Matcher timelines = timeline.matcher(json);
+        while (timelines.find()) {
+            Timeline tl = new Timeline(unescape(timelines.group(1)));
+            String datesStr = timelines.group(2);
+            if (!datesStr.isEmpty()) {
+                Pattern datePattern = Pattern.compile("\\{\\s*\\\"name\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"position\\\"\\s*:\\s*(\\d+)\\s*}");
+                Matcher dateMatches = datePattern.matcher(datesStr);
+                while (dateMatches.find()) {
+                    TimelineDate date = new TimelineDate(unescape(dateMatches.group(1)), Integer.parseInt(dateMatches.group(2)));
+                    tl.getDates().add(date);
+                }
+            }
+            book.getTimelines().add(tl);
+        }
+        
         Pattern reference = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"content\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher references = reference.matcher(json);
         while (references.find()) addReference(book, unescape(references.group(1)), unescape(references.group(2)), unescape(references.group(3)));
@@ -108,11 +141,13 @@ public final class JsonStorage {
         Pattern characterMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"characterMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"appearance\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher characterDetails = characterMetadata.matcher(json);
         while (characterDetails.find()) for (Character character : book.getCharacters()) if (character.getTitle().equals(unescape(characterDetails.group(1)))) character.setAppearance(unescape(characterDetails.group(2)));
-        Pattern sceneMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"sceneMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"location\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"participants\\\"\\s*:\\s*" + STRING + "\\s*}");
+        Pattern sceneMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"sceneMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"location\\\"\\s*:\\s*" + STRING + "(?:\\s*,\\s*\\\"timeline\\\"\\s*:\\s*" + STRING + ")?(?:\\s*,\\s*\\\"timelineDate\\\"\\s*:\\s*" + STRING + ")?\\s*,\\s*\\\"participants\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher sceneDetails = sceneMetadata.matcher(json);
         while (sceneDetails.find()) for (Scene scene : book.getScenes()) if (scene.getTitle().equals(unescape(sceneDetails.group(1)))) {
             scene.setLocationName(unescape(sceneDetails.group(2)));
-            String values = unescape(sceneDetails.group(3));
+            if (sceneDetails.group(3) != null) scene.setTimelineName(unescape(sceneDetails.group(3)));
+            if (sceneDetails.group(4) != null) scene.setTimelineDateName(unescape(sceneDetails.group(4)));
+            String values = unescape(sceneDetails.group(5));
             if (!values.isEmpty()) java.util.Collections.addAll(scene.getParticipantNames(), values.split("\u001F", -1));
         }
         Pattern locationMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"locationMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"visitors\\\"\\s*:\\s*" + STRING + "(?:\\s*,\\s*\\\"parent\\\"\\s*:\\s*" + STRING + ")?\\s*}");

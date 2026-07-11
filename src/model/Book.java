@@ -15,6 +15,7 @@ public final class Book {
     private final List<Race> sentientRaces = new ArrayList<>();
     private final List<Race> semiSentientRaces = new ArrayList<>();
     private final List<Race> nonSentientRaces = new ArrayList<>();
+    private final List<Timeline> timelines = new ArrayList<>();
     private final List<CustomTab> customTabs = new ArrayList<>();
 
     public Book(String title) { this.title = title; }
@@ -30,5 +31,6 @@ public final class Book {
     public List<Race> getSentientRaces() { return sentientRaces; }
     public List<Race> getSemiSentientRaces() { return semiSentientRaces; }
     public List<Race> getNonSentientRaces() { return nonSentientRaces; }
+    public List<Timeline> getTimelines() { return timelines; }
     public List<CustomTab> getCustomTabs() { return customTabs; }
 }

@@ -3,6 +3,7 @@ package ui;
 import model.Book;
 import model.Character;
 import model.Scene;
+import model.Timeline;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -15,6 +16,8 @@ public final class ScenePanel extends JPanel {
     private final JList<Scene> list = new JList<>(listModel);
     private final JTextArea description = new JTextArea();
     private final JComboBox<String> location = new JComboBox<>();
+    private final JComboBox<String> timeline = new JComboBox<>();
+    private final JComboBox<String> timelineDate = new JComboBox<>();
     private final DefaultListModel<String> characterModel = new DefaultListModel<>();
     private final JList<String> participants = new JList<>(characterModel);
     private Book book;
@@ -45,9 +48,12 @@ public final class ScenePanel extends JPanel {
             label.setForeground(selected ? source.getSelectionForeground() : source.getForeground());
             return label;
         });
-        JPanel fields = new JPanel(new GridLayout(3, 1, 0, 6));
+        timeline.addActionListener(e -> refreshTimelineDates());
+        JPanel fields = new JPanel(new GridLayout(5, 1, 0, 6));
         fields.add(labeled("Description", new JScrollPane(description)));
         fields.add(labeled("Location", location));
+        fields.add(labeled("Timeline", timeline));
+        fields.add(labeled("Timeline Date", timelineDate));
         fields.add(labeled("Participating characters", new JScrollPane(participants)));
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(list), fields);
         split.setResizeWeight(.3); add(split, BorderLayout.CENTER);
@@ -72,15 +78,26 @@ public final class ScenePanel extends JPanel {
     private void selectScene(ListSelectionEvent event) {
         if (event.getValueIsAdjusting()) return;
         saveSelected(); refreshChoices(); selected = list.getSelectedValue();
-        if (selected == null) { description.setText(""); location.setSelectedIndex(0); participants.clearSelection(); return; }
-        description.setText(selected.getContent()); location.setSelectedItem(selected.getLocationName());
+        if (selected == null) {
+            description.setText(""); location.setSelectedIndex(0); timeline.setSelectedIndex(0); timelineDate.setSelectedIndex(0);
+            participants.clearSelection(); return;
+        }
+        description.setText(selected.getContent());
+        location.setSelectedItem(selected.getLocationName());
+        timeline.setSelectedItem(selected.getTimelineName());
+        refreshTimelineDates();
+        timelineDate.setSelectedItem(selected.getTimelineDateName());
         int[] indexes = selected.getParticipantNames().stream().mapToInt(name -> characterModel.indexOf(name)).filter(index -> index >= 0).toArray();
         participants.setSelectedIndices(indexes);
     }
     private void saveSelected() {
         if (selected == null) return;
-        selected.setContent(description.getText()); selected.setLocationName((String) location.getSelectedItem());
-        selected.getParticipantNames().clear(); selected.getParticipantNames().addAll(participants.getSelectedValuesList());
+        selected.setContent(description.getText());
+        selected.setLocationName((String) location.getSelectedItem());
+        selected.setTimelineName((String) timeline.getSelectedItem());
+        selected.setTimelineDateName((String) timelineDate.getSelectedItem());
+        selected.getParticipantNames().clear();
+        selected.getParticipantNames().addAll(participants.getSelectedValuesList());
         registerVisitorsAtSceneLocation();
     }
     /** Participating in a scene automatically counts as visiting that scene's location. */
@@ -96,12 +113,25 @@ public final class ScenePanel extends JPanel {
     /** Reloads the location dropdown and character checklist from the current project. */
     private void refreshChoices() {
         String currentLocation = (String) location.getSelectedItem();
+        String currentTimeline = (String) timeline.getSelectedItem();
         java.util.List<String> currentParticipants = participants.getSelectedValuesList();
         characterModel.clear(); book.getCharacters().forEach(character -> characterModel.addElement(character.getTitle()));
         location.removeAllItems(); location.addItem(""); book.getLocations().forEach(item -> location.addItem(item.getTitle()));
         location.setSelectedItem(currentLocation);
+        timeline.removeAllItems(); timeline.addItem(""); book.getTimelines().forEach(tl -> timeline.addItem(tl.getTitle()));
+        timeline.setSelectedItem(currentTimeline);
         int[] indexes = currentParticipants.stream().mapToInt(characterModel::indexOf).filter(index -> index >= 0).toArray();
         participants.setSelectedIndices(indexes);
+    }
+    private void refreshTimelineDates() {
+        String selectedTimelineName = (String) timeline.getSelectedItem();
+        timelineDate.removeAllItems();
+        timelineDate.addItem("");
+        if (selectedTimelineName == null || selectedTimelineName.isBlank()) return;
+        book.getTimelines().stream()
+                .filter(tl -> tl.getTitle().equals(selectedTimelineName))
+                .findFirst()
+                .ifPresent(tl -> tl.getDates().forEach(date -> timelineDate.addItem(date.getName())));
     }
     private JPanel labeled(String label, JComponent component) { JPanel panel = new JPanel(new BorderLayout(0, 3)); panel.add(new JLabel(label), BorderLayout.NORTH); panel.add(component, BorderLayout.CENTER); return panel; }
 }

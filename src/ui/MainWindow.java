@@ -7,6 +7,7 @@ import model.CustomTab;
 import model.CustomText;
 import model.Character;
 import model.Scene;
+import model.Timeline;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -32,6 +33,7 @@ public final class MainWindow {
     private final ReferencePanel<model.Race> semiSentientRaces = new ReferencePanel<>("Race", model.Race::new);
     private final ReferencePanel<model.Race> nonSentientRaces = new ReferencePanel<>("Race", model.Race::new);
     private final GoalPanel goals = new GoalPanel();
+    private final JTabbedPane timelinesPane = new JTabbedPane();
     private final JTabbedPane references = new JTabbedPane();
     private final JLabel status = new JLabel("  Ready");
     private Actions actions;
@@ -56,6 +58,15 @@ public final class MainWindow {
         races.addTab("Semi-Sentient", semiSentientRaces);
         races.addTab("Not Sentient", nonSentientRaces);
         references.addTab("Races/Species", races);
+        
+        JPanel timelinesPanel = new JPanel(new BorderLayout(6, 6));
+        timelinesPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JButton addTimeline = new JButton("+ Timeline");
+        addTimeline.addActionListener(e -> addTimeline());
+        timelinesPanel.add(addTimeline, BorderLayout.NORTH);
+        timelinesPanel.add(timelinesPane, BorderLayout.CENTER);
+        references.addTab("Timelines", timelinesPanel);
+        
         references.addChangeListener(event -> {
             if (references.getSelectedComponent() == characters) {
                 scenes.saveChanges();
@@ -111,6 +122,7 @@ public final class MainWindow {
         sentientRaces.showEntries(book.getSentientRaces());
         semiSentientRaces.showEntries(book.getSemiSentientRaces());
         nonSentientRaces.showEntries(book.getNonSentientRaces());
+        showTimelines(book);
         showCustomTabs(book);
     }
     private void showLocation(Location location) {
@@ -143,6 +155,27 @@ public final class MainWindow {
         editor.showDocument(text, text.getTitle(), text.getContent());
         editor.focusEditor();
     }
+    
+    private void showTimelines(Book book) {
+        timelinesPane.removeAll();
+        for (Timeline timeline : book.getTimelines()) {
+            TimelinePanel panel = new TimelinePanel();
+            panel.showTimeline(timeline);
+            timelinesPane.addTab(timeline.getTitle(), panel);
+        }
+    }
+    
+    private void addTimeline() {
+        if (book == null) return;
+        String title = JOptionPane.showInputDialog(frame, "Timeline name:", "New Timeline", JOptionPane.PLAIN_MESSAGE);
+        if (title == null || title.isBlank()) return;
+        Timeline timeline = new Timeline(title.trim());
+        book.getTimelines().add(timeline);
+        TimelinePanel panel = new TimelinePanel();
+        panel.showTimeline(timeline);
+        timelinesPane.addTab(timeline.getTitle(), panel);
+    }
+    
     private void saveDocumentContent(Object document, String content) {
         if (document instanceof Chapter chapter) chapter.setContent(content);
         else if (document instanceof Location location) location.setContent(content);
