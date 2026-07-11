@@ -1,0 +1,24 @@
+escriba
+│
+├── app
+│      Main.java
+│
+├── model
+│      Book.java
+│      Chapter.java
+│      Scene.java
+│
+├── ui
+│      MainWindow.java
+│      ProjectTree.java
+│      EditorPane.java
+│      Toolbar.java
+│
+├── service
+│      ProjectService.java
+│      SaveService.java
+│
+├── storage
+│      JsonStorage.java
+│
+└── export
