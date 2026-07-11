@@ -9,6 +9,10 @@ import model.Note;
 import model.Scene;
 import model.Goal;
 import model.NamedDescription;
+import model.Race;
+import model.CustomTab;
+import model.CustomFolder;
+import model.CustomText;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Base64;
 
 /** Persists a project as a small portable JSON document, without external libraries. */
 public final class JsonStorage {
@@ -35,6 +40,14 @@ public final class JsonStorage {
         appendReferences(json, "item", book.getItems());
         appendReferences(json, "location", book.getLocations());
         appendReferences(json, "note", book.getNotes());
+        appendReferences(json, "sentientRace", book.getSentientRaces());
+        appendReferences(json, "semiSentientRace", book.getSemiSentientRaces());
+        appendReferences(json, "nonSentientRace", book.getNonSentientRaces());
+        for (CustomTab tab : book.getCustomTabs()) {
+            if (hasReferences(json)) json.append(',');
+            json.append("\n    {\"type\": \"customTab\", \"title\": \"").append(escape(tab.getTitle()))
+                    .append("\", \"content\": \"").append(escape(serializeTab(tab))).append("\"}");
+        }
         for (Goal goal : book.getGoals()) {
             if (hasReferences(json)) json.append(',');
             json.append("\n    {\"type\": \"goal\", \"title\": \"").append(escape(goal.getTitle()))
@@ -78,6 +91,13 @@ public final class JsonStorage {
         Pattern reference = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"content\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher references = reference.matcher(json);
         while (references.find()) addReference(book, unescape(references.group(1)), unescape(references.group(2)), unescape(references.group(3)));
+        Pattern customTab = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"customTab\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"content\\\"\\s*:\\s*" + STRING + "\\s*}");
+        Matcher customTabs = customTab.matcher(json);
+        while (customTabs.find()) {
+            CustomTab tab = new CustomTab(unescape(customTabs.group(1)));
+            deserializeTab(tab, unescape(customTabs.group(2)));
+            book.getCustomTabs().add(tab);
+        }
         Pattern goal = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"goal\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"outcome\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"conflict\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher goals = goal.matcher(json);
         while (goals.find()) {
@@ -117,6 +137,7 @@ public final class JsonStorage {
         NamedDescription item = switch (type) {
             case "character" -> new Character(title); case "scene" -> new Scene(title);
             case "item" -> new Item(title); case "location" -> new Location(title); case "note" -> new Note(title);
+            case "sentientRace", "semiSentientRace", "nonSentientRace" -> new Race(title);
             default -> null;
         };
         if (item == null) return;
@@ -127,7 +148,78 @@ public final class JsonStorage {
             case "item" -> book.getItems().add((Item) item);
             case "location" -> book.getLocations().add((Location) item);
             case "note" -> book.getNotes().add((Note) item);
+            case "sentientRace" -> book.getSentientRaces().add((Race) item);
+            case "semiSentientRace" -> book.getSemiSentientRaces().add((Race) item);
+            case "nonSentientRace" -> book.getNonSentientRaces().add((Race) item);
         }
+    }
+
+    private String serializeTab(CustomTab tab) {
+        StringBuilder data = new StringBuilder();
+        for (CustomFolder folder : tab.getFolders()) appendFolder(data, folder);
+        for (CustomText text : tab.getTexts()) appendText(data, text);
+        return data.toString();
+    }
+    private void appendFolder(StringBuilder data, CustomFolder folder) {
+        data.append("F|").append(encode(folder.getTitle())).append("|{");
+        for (CustomFolder child : folder.getFolders()) appendFolder(data, child);
+        for (CustomText text : folder.getTexts()) appendText(data, text);
+        data.append('}');
+    }
+    private void appendText(StringBuilder data, CustomText text) {
+        data.append("T|").append(encode(text.getTitle())).append('|').append(encode(text.getContent())).append(';');
+    }
+    private void deserializeTab(CustomTab tab, String data) {
+        ParseCursor cursor = new ParseCursor(data);
+        while (cursor.hasMore()) {
+            if (cursor.startsWith("F|")) {
+                CustomFolder folder = readFolder(cursor);
+                if (folder == null) return;
+                tab.getFolders().add(folder);
+            } else if (cursor.startsWith("T|")) {
+                CustomText text = readText(cursor);
+                if (text == null) return;
+                tab.getTexts().add(text);
+            } else return;
+        }
+    }
+    private CustomFolder readFolder(ParseCursor cursor) {
+        if (!cursor.consume("F|")) return null;
+        String title = cursor.until('|');
+        if (title == null || !cursor.consume("{")) return null;
+        CustomFolder folder = new CustomFolder(decode(title));
+        while (cursor.hasMore() && cursor.peek() != '}') {
+            if (cursor.startsWith("F|")) {
+                CustomFolder child = readFolder(cursor);
+                if (child == null) return null;
+                folder.getFolders().add(child);
+            } else if (cursor.startsWith("T|")) {
+                CustomText text = readText(cursor);
+                if (text == null) return null;
+                folder.getTexts().add(text);
+            } else return null;
+        }
+        return cursor.consume("}") ? folder : null;
+    }
+    private CustomText readText(ParseCursor cursor) {
+        if (!cursor.consume("T|")) return null;
+        String textTitle = cursor.until('|');
+        String content = cursor.until(';');
+        if (textTitle == null || content == null) return null;
+        CustomText text = new CustomText(decode(textTitle));
+        text.setContent(decode(content));
+        return text;
+    }
+    private String encode(String text) { return Base64.getUrlEncoder().encodeToString(text.getBytes(StandardCharsets.UTF_8)); }
+    private String decode(String text) { return new String(Base64.getUrlDecoder().decode(text), StandardCharsets.UTF_8); }
+    private static final class ParseCursor {
+        private final String data; private int index;
+        ParseCursor(String data) { this.data = data; }
+        boolean hasMore() { return index < data.length(); }
+        char peek() { return data.charAt(index); }
+        boolean startsWith(String value) { return data.startsWith(value, index); }
+        boolean consume(String value) { if (!startsWith(value)) return false; index += value.length(); return true; }
+        String until(char delimiter) { int end = data.indexOf(delimiter, index); if (end < 0) return null; String value = data.substring(index, end); index = end + 1; return value; }
     }
 
     private String escape(String text) { return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r"); }

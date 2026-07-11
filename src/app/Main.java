@@ -88,7 +88,7 @@ public final class Main {
     }
 
     private void saveCurrentChapter() {
-        if (selectedChapter != null && window.isEditingChapter()) selectedChapter.setContent(window.getEditorText());
+        window.saveCurrentDocument();
     }
 
     private void refreshWorkspace() {

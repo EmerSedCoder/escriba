@@ -22,6 +22,7 @@ public final class LocationPanel extends JPanel {
     private Book book;
     private Location selected;
     private Consumer<Location> selectionListener = ignored -> { };
+    private Runnable locationsChanged = () -> { };
 
     public LocationPanel() {
         super(new BorderLayout(6, 6));
@@ -41,12 +42,14 @@ public final class LocationPanel extends JPanel {
     public void showBook(Book book) { saveSelected(); this.book = book; selected = null; refreshCharacters(); rebuildTree(null); }
     public void saveChanges() { saveSelected(); }
     public void setSelectionListener(Consumer<Location> listener) { selectionListener = listener; }
+    public void setLocationsChanged(Runnable listener) { locationsChanged = listener; }
 
     private void addLocation(String parentName) {
         String name = JOptionPane.showInputDialog(this, "Location name:", parentName.isEmpty() ? "New Location" : "New Sub-location", JOptionPane.PLAIN_MESSAGE);
         if (name == null || name.isBlank()) return;
         saveSelected();
         Location location = new Location(name.trim()); location.setParentLocationName(parentName); book.getLocations().add(location);
+        locationsChanged.run();
         rebuildTree(location);
     }
     private void selectLocation(TreeSelectionEvent event) {

@@ -12,6 +12,10 @@ public final class Book {
     private final List<Location> locations = new ArrayList<>();
     private final List<Goal> goals = new ArrayList<>();
     private final List<Note> notes = new ArrayList<>();
+    private final List<Race> sentientRaces = new ArrayList<>();
+    private final List<Race> semiSentientRaces = new ArrayList<>();
+    private final List<Race> nonSentientRaces = new ArrayList<>();
+    private final List<CustomTab> customTabs = new ArrayList<>();
 
     public Book(String title) { this.title = title; }
     public String getTitle() { return title; }
@@ -23,4 +27,8 @@ public final class Book {
     public List<Location> getLocations() { return locations; }
     public List<Goal> getGoals() { return goals; }
     public List<Note> getNotes() { return notes; }
+    public List<Race> getSentientRaces() { return sentientRaces; }
+    public List<Race> getSemiSentientRaces() { return semiSentientRaces; }
+    public List<Race> getNonSentientRaces() { return nonSentientRaces; }
+    public List<CustomTab> getCustomTabs() { return customTabs; }
 }

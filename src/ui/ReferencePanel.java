@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /** Shared editor for named descriptions such as characters and locations. */
@@ -17,15 +18,23 @@ public final class ReferencePanel<T extends NamedDescription> extends JPanel {
     private final JTextArea description = new JTextArea();
     private List<T> entries;
     private T selected;
+    private Consumer<T> entryViewer = entry -> {};
 
     public ReferencePanel(String kind, Function<String, T> factory) {
         super(new BorderLayout(6, 6));
         this.kind = kind;
         this.factory = factory;
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 6, 0));
         JButton add = new JButton("+ " + kind);
         add.addActionListener(e -> addEntry());
-        add(add, BorderLayout.NORTH);
+        JButton view = new JButton("View in Editor");
+        view.addActionListener(e -> {
+            if (selected != null) entryViewer.accept(selected);
+        });
+        buttonPanel.add(add);
+        buttonPanel.add(view);
+        add(buttonPanel, BorderLayout.NORTH);
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.addListSelectionListener(this::selectEntry);
         description.setLineWrap(true);
@@ -45,6 +54,7 @@ public final class ReferencePanel<T extends NamedDescription> extends JPanel {
         description.setText("");
     }
     public void saveChanges() { saveSelected(); }
+    public void setEntryViewer(Consumer<T> viewer) { entryViewer = viewer; }
 
     private void addEntry() {
         String title = JOptionPane.showInputDialog(this, kind + " name:", "New " + kind, JOptionPane.PLAIN_MESSAGE);

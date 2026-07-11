@@ -7,6 +7,7 @@ import model.Scene;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
+import java.util.function.Consumer;
 
 /** Scene planning editor that connects a scene to a location and characters. */
 public final class ScenePanel extends JPanel {
@@ -18,11 +19,21 @@ public final class ScenePanel extends JPanel {
     private final JList<String> participants = new JList<>(characterModel);
     private Book book;
     private Scene selected;
+    private Consumer<Scene> sceneViewer = scene -> {};
 
     public ScenePanel() {
         super(new BorderLayout(6, 6));
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        JButton add = new JButton("+ Scene"); add.addActionListener(e -> addScene()); add(add, BorderLayout.NORTH);
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 6, 0));
+        JButton add = new JButton("+ Scene");
+        add.addActionListener(e -> addScene());
+        JButton view = new JButton("View in Editor");
+        view.addActionListener(e -> {
+            if (selected != null) sceneViewer.accept(selected);
+        });
+        buttonPanel.add(add);
+        buttonPanel.add(view);
+        add(buttonPanel, BorderLayout.NORTH);
         list.addListSelectionListener(this::selectScene);
         description.setLineWrap(true); description.setWrapStyleWord(true);
         participants.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -47,15 +58,20 @@ public final class ScenePanel extends JPanel {
         selected = null; description.setText(""); participants.clearSelection();
     }
     public void saveChanges() { saveSelected(); }
+    public void setSceneViewer(Consumer<Scene> viewer) { sceneViewer = viewer; }
+    public void refreshProjectChoices() {
+        if (book == null) return;
+        refreshChoices();
+    }
     private void addScene() {
         String name = JOptionPane.showInputDialog(this, "Scene name:", "New Scene", JOptionPane.PLAIN_MESSAGE);
         if (name == null || name.isBlank()) return;
-        saveSelected(); refreshProjectChoices();
+        saveSelected(); refreshChoices();
         Scene scene = new Scene(name.trim()); book.getScenes().add(scene); listModel.addElement(scene); list.setSelectedValue(scene, true);
     }
     private void selectScene(ListSelectionEvent event) {
         if (event.getValueIsAdjusting()) return;
-        saveSelected(); refreshProjectChoices(); selected = list.getSelectedValue();
+        saveSelected(); refreshChoices(); selected = list.getSelectedValue();
         if (selected == null) { description.setText(""); location.setSelectedIndex(0); participants.clearSelection(); return; }
         description.setText(selected.getContent()); location.setSelectedItem(selected.getLocationName());
         int[] indexes = selected.getParticipantNames().stream().mapToInt(name -> characterModel.indexOf(name)).filter(index -> index >= 0).toArray();
@@ -78,7 +94,7 @@ public final class ScenePanel extends JPanel {
                 }));
     }
     /** Reloads the location dropdown and character checklist from the current project. */
-    private void refreshProjectChoices() {
+    private void refreshChoices() {
         String currentLocation = (String) location.getSelectedItem();
         java.util.List<String> currentParticipants = participants.getSelectedValuesList();
         characterModel.clear(); book.getCharacters().forEach(character -> characterModel.addElement(character.getTitle()));

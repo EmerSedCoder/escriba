@@ -9,6 +9,7 @@ import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 /** Character profile editor, including appearance and participation history. */
 public final class CharacterPanel extends JPanel {
@@ -19,11 +20,21 @@ public final class CharacterPanel extends JPanel {
     private final JTextArea history = area(false);
     private Book book;
     private Character selected;
+    private Consumer<Character> characterViewer = character -> {};
 
     public CharacterPanel() {
         super(new BorderLayout(6, 6));
         setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        JButton add = new JButton("+ Character"); add.addActionListener(e -> addCharacter()); add(add, BorderLayout.NORTH);
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 6, 0));
+        JButton add = new JButton("+ Character");
+        add.addActionListener(e -> addCharacter());
+        JButton view = new JButton("View in Editor");
+        view.addActionListener(e -> {
+            if (selected != null) characterViewer.accept(selected);
+        });
+        buttonPanel.add(add);
+        buttonPanel.add(view);
+        add(buttonPanel, BorderLayout.NORTH);
         list.addListSelectionListener(this::selectCharacter);
         JPanel fields = new JPanel(new GridLayout(3, 1, 0, 6));
         fields.add(labeled("Description", description)); fields.add(labeled("Appearance", appearance));
@@ -36,6 +47,7 @@ public final class CharacterPanel extends JPanel {
         selected = null; description.setText(""); appearance.setText(""); history.setText("");
     }
     public void saveChanges() { saveSelected(); }
+    public void setCharacterViewer(Consumer<Character> viewer) { characterViewer = viewer; }
     public void refreshHistory() { if (selected != null) history.setText(participationHistory(selected)); }
     private void addCharacter() {
         String name = JOptionPane.showInputDialog(this, "Character name:", "New Character", JOptionPane.PLAIN_MESSAGE);
