@@ -160,7 +160,7 @@ public final class MainWindow {
         timelinesPane.removeAll();
         for (Timeline timeline : book.getTimelines()) {
             TimelinePanel panel = new TimelinePanel();
-            panel.showTimeline(timeline);
+            panel.showTimeline(timeline, book);
             timelinesPane.addTab(timeline.getTitle(), panel);
         }
     }
@@ -172,7 +172,7 @@ public final class MainWindow {
         Timeline timeline = new Timeline(title.trim());
         book.getTimelines().add(timeline);
         TimelinePanel panel = new TimelinePanel();
-        panel.showTimeline(timeline);
+        panel.showTimeline(timeline, book);
         timelinesPane.addTab(timeline.getTitle(), panel);
     }
     
