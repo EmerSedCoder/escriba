@@ -210,7 +210,7 @@ This project is licensed under the MIT License.
 
 ## 👤 Author
 
-**Valdeci Miranda**
+**EmerSedCoder**
 
 Passionate about software engineering, artificial intelligence and creative writing.
 
