@@ -15,12 +15,14 @@ import java.util.function.Consumer;
 public final class CharacterPanel extends JPanel {
     private final DefaultListModel<Character> listModel = new DefaultListModel<>();
     private final JList<Character> list = new JList<>(listModel);
-    private final JTextArea description = area(true);
-    private final JTextArea appearance = area(true);
+    private final RichTextPane description = new RichTextPane();
+    private final RichTextPane appearance = new RichTextPane();
+    private final JComboBox<String> goalDropdown = new JComboBox<>();
     private final JTextArea history = area(false);
     private Book book;
     private Character selected;
     private Consumer<Character> characterViewer = character -> {};
+    private boolean isUpdatingDropdown = false;
 
     public CharacterPanel() {
         super(new BorderLayout(6, 6));
@@ -36,8 +38,17 @@ public final class CharacterPanel extends JPanel {
         buttonPanel.add(view);
         add(buttonPanel, BorderLayout.NORTH);
         list.addListSelectionListener(this::selectCharacter);
-        JPanel fields = new JPanel(new GridLayout(3, 1, 0, 6));
-        fields.add(labeled("Description", description)); fields.add(labeled("Appearance", appearance));
+        
+        goalDropdown.addActionListener(e -> {
+            if (!isUpdatingDropdown && selected != null) {
+                selected.setGoalTitle((String) goalDropdown.getSelectedItem());
+            }
+        });
+
+        JPanel fields = new JPanel(new GridLayout(4, 1, 0, 6));
+        fields.add(labeled("Description", description));
+        fields.add(labeled("Appearance", appearance));
+        fields.add(labeled("Goal", goalDropdown));
         fields.add(labeled("Scenes & locations", history));
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(list), fields);
         split.setResizeWeight(.3); add(split, BorderLayout.CENTER);
@@ -45,6 +56,7 @@ public final class CharacterPanel extends JPanel {
     public void showBook(Book book) {
         saveSelected(); this.book = book; listModel.clear(); book.getCharacters().forEach(listModel::addElement);
         selected = null; description.setText(""); appearance.setText(""); history.setText("");
+        refreshGoalDropdown();
     }
     public void saveChanges() { saveSelected(); }
     public void setCharacterViewer(Consumer<Character> viewer) { characterViewer = viewer; }
@@ -61,8 +73,29 @@ public final class CharacterPanel extends JPanel {
         description.setText(selected == null ? "" : selected.getContent());
         appearance.setText(selected == null ? "" : selected.getAppearance());
         history.setText(selected == null ? "" : participationHistory(selected));
+        refreshGoalDropdown();
     }
-    private void saveSelected() { if (selected != null) { selected.setContent(description.getText()); selected.setAppearance(appearance.getText()); } }
+    private void saveSelected() {
+        if (selected != null) {
+            selected.setContent(description.getText());
+            selected.setAppearance(appearance.getText());
+            selected.setGoalTitle((String) goalDropdown.getSelectedItem());
+        }
+    }
+    private void refreshGoalDropdown() {
+        isUpdatingDropdown = true;
+        goalDropdown.removeAllItems();
+        goalDropdown.addItem("");
+        if (book != null) {
+            book.getGoals().forEach(goal -> goalDropdown.addItem(goal.getTitle()));
+        }
+        if (selected != null) {
+            goalDropdown.setSelectedItem(selected.getGoalTitle());
+        } else {
+            goalDropdown.setSelectedIndex(0);
+        }
+        isUpdatingDropdown = false;
+    }
     private String participationHistory(Character character) {
         StringBuilder result = new StringBuilder("Scenes participated:\n");
         LinkedHashSet<String> locations = new LinkedHashSet<>();
@@ -78,7 +111,9 @@ public final class CharacterPanel extends JPanel {
         return result.toString();
     }
     private boolean mentions(String text, String name) {
-        return text.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT));
+        if (text == null) return false;
+        String plainText = text.replaceAll("<[^>]*>", "");
+        return plainText.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT));
     }
     private JTextArea area(boolean editable) { JTextArea value = new JTextArea(); value.setEditable(editable); value.setLineWrap(true); value.setWrapStyleWord(true); return value; }
     private JPanel labeled(String label, JComponent component) { JPanel panel = new JPanel(new BorderLayout(0, 3)); panel.add(new JLabel(label), BorderLayout.NORTH); panel.add(new JScrollPane(component), BorderLayout.CENTER); return panel; }

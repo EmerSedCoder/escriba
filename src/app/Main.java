@@ -24,13 +24,33 @@ public final class Main {
 
     private void start() {
         window.setActions(new MainWindow.Actions() {
-            public void newProject() { createProject(); }
-            public void openProject() { Main.this.openProject(); }
-            public void saveProject() { Main.this.saveProject(false); }
-            public void saveProjectAs() { Main.this.saveProject(true); }
-            public void addChapter() { Main.this.addChapter(); }
-            public void chapterSelected(Chapter chapter) { selectChapter(chapter); }
-            public void exit() { window.dispose(); }
+            public void newProject() {
+                createProject();
+            }
+
+            public void openProject() {
+                Main.this.openProject();
+            }
+
+            public void saveProject() {
+                Main.this.saveProject(false);
+            }
+
+            public void saveProjectAs() {
+                Main.this.saveProject(true);
+            }
+
+            public void addChapter() {
+                Main.this.addChapter();
+            }
+
+            public void chapterSelected(Chapter chapter) {
+                selectChapter(chapter);
+            }
+
+            public void exit() {
+                window.dispose();
+            }
         });
         createProject();
         window.showWindow();
@@ -46,7 +66,8 @@ public final class Main {
 
     private void openProject() {
         Path file = window.chooseProjectToOpen();
-        if (file == null) return;
+        if (file == null)
+            return;
         try {
             projects.setBook(saves.open(file));
             projectFile = file;
@@ -61,8 +82,10 @@ public final class Main {
     private void saveProject(boolean saveAs) {
         saveCurrentChapter();
         window.saveReferenceChanges();
-        if (saveAs || projectFile == null) projectFile = window.chooseProjectToSave(projectFile);
-        if (projectFile == null) return;
+        if (saveAs || projectFile == null)
+            projectFile = window.chooseProjectToSave(projectFile);
+        if (projectFile == null)
+            return;
         try {
             saves.save(projectFile, projects.getBook());
             window.setStatus("Saved " + projectFile.getFileName());
@@ -73,7 +96,8 @@ public final class Main {
 
     private void addChapter() {
         String title = window.askForChapterTitle();
-        if (title == null || title.isBlank()) return;
+        if (title == null || title.isBlank())
+            return;
         saveCurrentChapter();
         selectedChapter = projects.addChapter(title.trim());
         refreshWorkspace();
@@ -81,7 +105,8 @@ public final class Main {
     }
 
     private void selectChapter(Chapter chapter) {
-        if (chapter == null || chapter == selectedChapter) return;
+        if (chapter == null || chapter == selectedChapter)
+            return;
         saveCurrentChapter();
         selectedChapter = chapter;
         window.showChapter(chapter);

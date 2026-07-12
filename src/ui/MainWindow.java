@@ -12,8 +12,13 @@ import model.Timeline;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.Color;
+import javax.swing.JToggleButton;
 import java.nio.file.Path;
+import javax.swing.UIManager;
+import javax.swing.SwingUtilities;
 
 /** The top-level professional writing workspace. */
 public final class MainWindow {
@@ -45,7 +50,7 @@ public final class MainWindow {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
         frame.setJMenuBar(createMenuBar());
-        frame.add(new Toolbar(e -> actions.newProject(), e -> actions.openProject(), e -> actions.saveProject(), e -> actions.addChapter()), BorderLayout.NORTH);
+        frame.add(new Toolbar(e -> actions.newProject(), e -> actions.openProject(), e -> actions.saveProject(), e -> actions.addChapter(), e -> toggleTheme(e)), BorderLayout.NORTH);
         references.addTab("Manuscript", projectTree);
         references.addTab("Characters", characters);
         references.addTab("Scenes", scenes);
@@ -77,6 +82,10 @@ public final class MainWindow {
                 scenes.saveChanges();
                 characters.refreshHistory();
             }
+            if (references.getSelectedComponent() == goals) {
+                characters.saveChanges();
+                goals.refreshLinkedCharacters();
+            }
             if (!creatingCustomTab && references.getSelectedIndex() >= 0 && "+".equals(references.getTitleAt(references.getSelectedIndex()))) createCustomTab();
         });
         
@@ -97,13 +106,126 @@ public final class MainWindow {
         locations.setSelectionListener(this::showLocation);
         locations.setLocationsChanged(scenes::refreshProjectChoices);
         editor.setDocumentChanged(this::saveDocumentContent);
-        editor.setTextChanged(() -> setStatus(wordCount() + " words  •  " + editor.getText().length() + " characters"));
+        editor.setTextChanged(() -> setStatus(wordCount() + " words  •  " + editor.getPlainText().length() + " characters"));
     }
 
     public void setActions(Actions actions) { this.actions = actions; }
     public void showWindow() { frame.setVisible(true); editor.focusEditor(); }
     public void dispose() { frame.dispose(); }
     public void setTitle(String title) { frame.setTitle(title); }
+    private boolean darkMode = false;
+
+    private void toggleTheme(ActionEvent e) {
+        darkMode = !darkMode;
+        applyCurrentTheme();
+    }
+
+    private void applyCurrentTheme() {
+        Color bg, inputBg, controlBg, fg, caretColor;
+        if (darkMode) {
+            bg         = new Color(30, 30, 30);   // #1E1E1E
+            inputBg    = new Color(40, 40, 40);   // #282828
+            controlBg  = new Color(51, 51, 51);   // #333333
+            fg         = Color.WHITE;
+            caretColor = Color.WHITE;
+        } else {
+            bg         = javax.swing.UIManager.getLookAndFeelDefaults().getColor("Panel.background");
+            inputBg    = Color.WHITE;
+            controlBg  = javax.swing.UIManager.getLookAndFeelDefaults().getColor("Button.background");
+            fg         = Color.BLACK;
+            caretColor = Color.BLACK;
+            if (bg == null) bg = new Color(238, 238, 238);
+            if (controlBg == null) controlBg = new Color(238, 238, 238);
+        }
+        // Apply to every component recursively
+        applyThemeToComponent(frame.getJMenuBar(), bg, controlBg, inputBg, fg, caretColor);
+        applyThemeToComponent(frame.getContentPane(), bg, controlBg, inputBg, fg, caretColor);
+        // Status bar
+        status.setBackground(bg);
+        status.setForeground(fg);
+        status.setOpaque(true);
+        frame.getContentPane().setBackground(bg);
+        frame.repaint();
+    }
+
+    private void applyThemeToComponent(java.awt.Component comp, Color bg, Color controlBg,
+                                        Color inputBg, Color fg, Color caretColor) {
+        if (comp == null) return;
+
+        if (comp instanceof RichTextPane rtp) {
+            // HTML editor: set component colors + update stylesheet
+            rtp.setBackground(inputBg);
+            rtp.setForeground(fg);
+            rtp.setCaretColor(caretColor);
+            rtp.setOpaque(true);
+            updateRichTextPaneTheme(rtp, inputBg, fg);
+        } else if (comp instanceof javax.swing.text.JTextComponent tc) {
+            tc.setBackground(inputBg);
+            tc.setForeground(fg);
+            tc.setCaretColor(caretColor);
+            tc.setOpaque(true);
+        } else if (comp instanceof JButton || comp instanceof JToggleButton) {
+            comp.setBackground(controlBg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JComboBox) {
+            comp.setBackground(controlBg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JList) {
+            comp.setBackground(inputBg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JTree) {
+            comp.setBackground(inputBg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JTable table) {
+            table.setBackground(inputBg);
+            table.setForeground(fg);
+            table.setGridColor(darkMode ? new Color(60, 60, 60) : new Color(204, 204, 204));
+        } else if (comp instanceof JLabel) {
+            comp.setForeground(fg);
+        } else if (comp instanceof JMenuBar || comp instanceof JMenu || comp instanceof JMenuItem) {
+            comp.setBackground(bg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JPanel || comp instanceof JSplitPane
+                   || comp instanceof JToolBar || comp instanceof JScrollPane) {
+            comp.setBackground(bg);
+            comp.setForeground(fg);
+        } else if (comp instanceof JTabbedPane tp) {
+            tp.setBackground(bg);
+            tp.setForeground(fg);
+        } else if (comp instanceof JScrollBar) {
+            comp.setBackground(bg);
+        } else if (comp instanceof JViewport) {
+            comp.setBackground(inputBg);
+        }
+
+        // Recurse into children
+        if (comp instanceof java.awt.Container container) {
+            for (java.awt.Component child : container.getComponents()) {
+                applyThemeToComponent(child, bg, controlBg, inputBg, fg, caretColor);
+            }
+        }
+        // Also handle JMenu items
+        if (comp instanceof JMenu menu) {
+            for (int i = 0; i < menu.getItemCount(); i++) {
+                JMenuItem item = menu.getItem(i);
+                if (item != null) applyThemeToComponent(item, bg, controlBg, inputBg, fg, caretColor);
+            }
+        }
+    }
+
+    private void updateRichTextPaneTheme(RichTextPane rtp, Color bg, Color fg) {
+        try {
+            javax.swing.text.html.HTMLDocument doc = (javax.swing.text.html.HTMLDocument) rtp.getDocument();
+            javax.swing.text.html.StyleSheet ss = doc.getStyleSheet();
+            String bgHex = String.format("#%02x%02x%02x", bg.getRed(), bg.getGreen(), bg.getBlue());
+            String fgHex = String.format("#%02x%02x%02x", fg.getRed(), fg.getGreen(), fg.getBlue());
+            ss.addRule("body { color: " + fgHex + "; background-color: " + bgHex + "; }");
+            ss.addRule("p, h1, h2, h3, h4, li, td, th, span, div, a { color: " + fgHex + "; }");
+            rtp.repaint();
+        } catch (Exception ex) {
+            // Ignore if document type doesn't match
+        }
+    }
     public void setStatus(String message) { status.setText("  " + message); }
     public String getEditorText() { return editor.getText(); }
     public boolean isEditingChapter() { return editor.getSelectedDocument() instanceof Chapter; }
@@ -123,6 +245,7 @@ public final class MainWindow {
         editor.clearDocuments(); projectTree.showBook(book, selected); editor.showChapter(selected);
         characters.showBook(book); scenes.showBook(book);
         items.showEntries(book.getItems()); locations.showBook(book);
+        goals.setBook(book);
         goals.showEntries(book.getGoals()); notes.showEntries(book.getNotes());
         sentientRaces.showEntries(book.getSentientRaces());
         semiSentientRaces.showEntries(book.getSemiSentientRaces());
@@ -282,7 +405,7 @@ public final class MainWindow {
         item.addActionListener(listener); return item;
     }
     private int wordCount() {
-        String trimmed = editor.getText().trim();
+        String trimmed = editor.getPlainText().trim();
         return trimmed.isEmpty() ? 0 : trimmed.split("\\s+").length;
     }
 }

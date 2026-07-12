@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 public final class ScenePanel extends JPanel {
     private final DefaultListModel<Scene> listModel = new DefaultListModel<>();
     private final JList<Scene> list = new JList<>(listModel);
-    private final JTextArea description = new JTextArea();
+    private final RichTextPane description = new RichTextPane();
     private final JComboBox<String> location = new JComboBox<>();
     private final JComboBox<String> timeline = new JComboBox<>();
     private final JComboBox<String> timelineDate = new JComboBox<>();
@@ -38,7 +38,7 @@ public final class ScenePanel extends JPanel {
         buttonPanel.add(view);
         add(buttonPanel, BorderLayout.NORTH);
         list.addListSelectionListener(this::selectScene);
-        description.setLineWrap(true); description.setWrapStyleWord(true);
+        // JTextPane handles wrapping automatically
         participants.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         participants.setCellRenderer((source, name, index, selected, focused) -> {
             JLabel label = new JLabel((selected ? "✓ " : "+ ") + name);

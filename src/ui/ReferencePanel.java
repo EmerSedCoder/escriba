@@ -15,7 +15,7 @@ public final class ReferencePanel<T extends NamedDescription> extends JPanel {
     private final Function<String, T> factory;
     private final DefaultListModel<T> listModel = new DefaultListModel<>();
     private final JList<T> list = new JList<>(listModel);
-    private final JTextArea description = new JTextArea();
+    private final RichTextPane description = new RichTextPane();
     private List<T> entries;
     private T selected;
     private Consumer<T> entryViewer = entry -> {};
@@ -37,9 +37,7 @@ public final class ReferencePanel<T extends NamedDescription> extends JPanel {
         add(buttonPanel, BorderLayout.NORTH);
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.addListSelectionListener(this::selectEntry);
-        description.setLineWrap(true);
-        description.setWrapStyleWord(true);
-        description.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+        // RichTextPane handles styling and wrapping automatically
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(list), new JScrollPane(description));
         split.setResizeWeight(.35);
         add(split, BorderLayout.CENTER);

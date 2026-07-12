@@ -71,7 +71,8 @@ public final class JsonStorage {
         for (Character character : book.getCharacters()) {
             if (hasReferences(json)) json.append(',');
             json.append("\n    {\"type\": \"characterMetadata\", \"title\": \"").append(escape(character.getTitle()))
-                    .append("\", \"appearance\": \"").append(escape(character.getAppearance())).append("\"}");
+                    .append("\", \"appearance\": \"").append(escape(character.getAppearance()))
+                    .append("\", \"goal\": \"").append(escape(character.getGoalTitle())).append("\"}");
         }
         for (Scene scene : book.getScenes()) {
             if (hasReferences(json)) json.append(',');
@@ -138,9 +139,12 @@ public final class JsonStorage {
             item.setOutcome(unescape(goals.group(2))); item.setConflict(unescape(goals.group(3)));
             book.getGoals().add(item);
         }
-        Pattern characterMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"characterMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"appearance\\\"\\s*:\\s*" + STRING + "\\s*}");
+        Pattern characterMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"characterMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"appearance\\\"\\s*:\\s*" + STRING + "(?:\\s*,\\s*\\\"goal\\\"\\s*:\\s*" + STRING + ")?\\s*}");
         Matcher characterDetails = characterMetadata.matcher(json);
-        while (characterDetails.find()) for (Character character : book.getCharacters()) if (character.getTitle().equals(unescape(characterDetails.group(1)))) character.setAppearance(unescape(characterDetails.group(2)));
+        while (characterDetails.find()) for (Character character : book.getCharacters()) if (character.getTitle().equals(unescape(characterDetails.group(1)))) {
+            character.setAppearance(unescape(characterDetails.group(2)));
+            if (characterDetails.group(3) != null) character.setGoalTitle(unescape(characterDetails.group(3)));
+        }
         Pattern sceneMetadata = Pattern.compile("\\{\\s*\\\"type\\\"\\s*:\\s*\\\"sceneMetadata\\\"\\s*,\\s*\\\"title\\\"\\s*:\\s*" + STRING + "\\s*,\\s*\\\"location\\\"\\s*:\\s*" + STRING + "(?:\\s*,\\s*\\\"timeline\\\"\\s*:\\s*" + STRING + ")?(?:\\s*,\\s*\\\"timelineDate\\\"\\s*:\\s*" + STRING + ")?\\s*,\\s*\\\"participants\\\"\\s*:\\s*" + STRING + "\\s*}");
         Matcher sceneDetails = sceneMetadata.matcher(json);
         while (sceneDetails.find()) for (Scene scene : book.getScenes()) if (scene.getTitle().equals(unescape(sceneDetails.group(1)))) {

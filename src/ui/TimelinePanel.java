@@ -215,39 +215,48 @@ public final class TimelinePanel extends JPanel {
         JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(this), "Edit Date", true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setLayout(new GridBagLayout());
-        dialog.setSize(350, 180);
+        dialog.setSize(500, 230);
         dialog.setLocationRelativeTo(SwingUtilities.getWindowAncestor(this));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(12, 12, 12, 12);
         gbc.anchor = GridBagConstraints.WEST;
 
         JLabel nameLabel = new JLabel("Date Name:");
+        nameLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         gbc.gridx = 0;
         gbc.gridy = 0;
         dialog.add(nameLabel, gbc);
 
-        JTextField nameField = new JTextField(selectedDate.getName(), 20);
+        JTextField nameField = new JTextField(selectedDate.getName(), 35);
+        nameField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
         dialog.add(nameField, gbc);
 
         JLabel positionLabel = new JLabel("Position (number):");
+        positionLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
         dialog.add(positionLabel, gbc);
 
-        JTextField positionField = new JTextField(String.valueOf(selectedDate.getPosition()), 20);
+        JTextField positionField = new JTextField(String.valueOf(selectedDate.getPosition()), 35);
+        positionField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
         gbc.gridx = 1;
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
         dialog.add(positionField, gbc);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         JButton okButton = new JButton("OK");
         JButton cancelButton = new JButton("Cancel");
+        okButton.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        cancelButton.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
 
         okButton.addActionListener(e -> {
             String newName = nameField.getText().trim();
@@ -279,7 +288,7 @@ public final class TimelinePanel extends JPanel {
         gbc.gridy = 2;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(16, 8, 8, 8);
+        gbc.insets = new Insets(20, 12, 12, 12);
         dialog.add(buttonPanel, gbc);
 
         dialog.setVisible(true);
